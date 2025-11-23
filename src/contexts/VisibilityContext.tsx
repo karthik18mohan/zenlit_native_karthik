@@ -73,8 +73,6 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
   const locationWatchRef = useRef<(() => void) | null>(null);
   const hasRequestedPermissionRef = useRef(false);
   const userForcedInvisibleRef = useRef(false);
-  const retryCountRef = useRef(0);
-  const maxRetries = 3;
 
   const stopLocationRefresh = useCallback(() => {
     if (locationWatchRef.current) {
@@ -92,7 +90,6 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
       async (coords) => {
         await updateUserLocation(coords.latitude, coords.longitude);
         setLocationStatus('success');
-        retryCountRef.current = 0;
       },
       async (error: LocationError) => {
         console.warn(`Geolocation refresh error (${getErrorName(error.code)}):`, error);
@@ -105,8 +102,10 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
             locationWatchRef.current = null;
           }
         } else if (error.code === 2) {
+          console.warn('Position unavailable - will retry on next interval');
           setLocationStatus('position-unavailable');
         } else if (error.code === 3) {
+          console.warn('Location timeout - will retry on next interval');
           setLocationStatus('timeout');
         }
       },
@@ -137,7 +136,6 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
         await updateUserLocation(coords.latitude, coords.longitude);
         setLocationPermissionDenied(false);
         setLocationStatus('success');
-        retryCountRef.current = 0;
         startLocationRefresh();
       } catch (error: any) {
         console.warn(`Geolocation error (${getErrorName(error.code)}):`, error);
@@ -147,17 +145,13 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
           await deleteUserLocation();
           stopLocationRefresh();
         } else if (error.code === 2) {
+          console.warn('Initial position unavailable - starting location watch anyway');
           setLocationStatus('position-unavailable');
-          retryCountRef.current += 1;
-          if (retryCountRef.current < maxRetries) {
-            setTimeout(() => handleLocationUpdate(), 2000 * retryCountRef.current);
-          }
+          startLocationRefresh();
         } else if (error.code === 3) {
+          console.warn('Initial location timeout - starting location watch anyway');
           setLocationStatus('timeout');
-          retryCountRef.current += 1;
-          if (retryCountRef.current < maxRetries) {
-            setTimeout(() => handleLocationUpdate(), 2000 * retryCountRef.current);
-          }
+          startLocationRefresh();
         }
       }
     } else {
@@ -166,7 +160,7 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
       setLocationStatus('not-attempted');
       stopLocationRefresh();
     }
-  }, [isVisible, startLocationRefresh, stopLocationRefresh, maxRetries]);
+  }, [isVisible, startLocationRefresh, stopLocationRefresh]);
 
   useEffect(() => {
     handleLocationUpdate();
@@ -211,7 +205,6 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
           await updateUserLocation(coords.latitude, coords.longitude);
           setLocationPermissionDenied(false);
           setLocationStatus('success');
-          retryCountRef.current = 0;
           if (autoEnable) {
             setIsVisible(true, 'auto');
           }
@@ -224,10 +217,23 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
             setLocationStatus('permission-denied');
             await deleteUserLocation();
             setIsVisible(false, 'auto');
+            return false;
           } else if (error.code === 2) {
+            console.warn('Initial position unavailable on permission request - will start watch anyway');
             setLocationStatus('position-unavailable');
+            if (autoEnable) {
+              setIsVisible(true, 'auto');
+            }
+            startLocationRefresh();
+            return true;
           } else if (error.code === 3) {
+            console.warn('Initial location timeout on permission request - will start watch anyway');
             setLocationStatus('timeout');
+            if (autoEnable) {
+              setIsVisible(true, 'auto');
+            }
+            startLocationRefresh();
+            return true;
           }
           return false;
         }
