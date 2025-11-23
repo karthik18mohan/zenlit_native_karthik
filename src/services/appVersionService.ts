@@ -15,6 +15,13 @@ export interface AppVersion {
   released_at: string;
 }
 
+type UserProfileNotif = {
+  id: string;
+  expo_push_token: string | null;
+  notification_enabled: boolean;
+  notification_preferences?: { app_updates?: boolean } | null;
+};
+
 export async function checkForAppUpdate(): Promise<{
   hasUpdate: boolean;
   isCritical: boolean;
@@ -23,16 +30,18 @@ export async function checkForAppUpdate(): Promise<{
 }> {
   try {
     const currentVersion = Constants.expoConfig?.version || '1.0.0';
-    const platform = Platform.OS as 'ios' | 'android';
+    const os = Platform.OS;
 
-    if (platform === 'web') {
+    if (os === 'web') {
       return { hasUpdate: false, isCritical: false, version: null, error: null };
     }
+
+    const platformFilter: 'ios' | 'android' = os === 'ios' ? 'ios' : 'android';
 
     const { data: latestVersions, error } = await supabase
       .from('app_versions')
       .select('*')
-      .or(`platform.eq.${platform},platform.eq.all`)
+      .or(`platform.eq.${platformFilter},platform.eq.all`)
       .order('released_at', { ascending: false })
       .limit(1);
 
@@ -184,7 +193,7 @@ export async function sendAppUpdateNotificationToAllUsers(versionId: string): Pr
       return { success: false, sent: 0, error: 'Failed to fetch users' };
     }
 
-    const eligibleUsers = users.filter(u => {
+    const eligibleUsers = ((users || []) as UserProfileNotif[]).filter((u: UserProfileNotif) => {
       const prefs = u.notification_preferences || {};
       return prefs.app_updates !== false;
     });
@@ -213,7 +222,7 @@ export async function sendAppUpdateNotificationToAllUsers(versionId: string): Pr
         'Authorization': `Bearer ${supabaseAnonKey}`,
       },
       body: JSON.stringify({
-        userIds: eligibleUsers.map(u => u.id),
+        userIds: eligibleUsers.map((u: UserProfileNotif) => u.id),
         type: 'app_update',
         title: notificationTitle,
         body: notificationBody,
