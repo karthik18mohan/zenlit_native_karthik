@@ -20,6 +20,45 @@ Deno.serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    const url = new URL(req.url);
+    const thresholdParam = url.searchParams.get("thresholdSeconds");
+    let thresholdSeconds = Number(thresholdParam ?? "180");
+    if (!Number.isFinite(thresholdSeconds) || thresholdSeconds < 60 || thresholdSeconds > 600) {
+      thresholdSeconds = 180;
+    }
+    const cutoffIso = new Date(Date.now() - thresholdSeconds * 1000).toISOString();
+
+    const { data: staleRows, error: staleError } = await supabase
+      .from("locations")
+      .select("id")
+      .lt("updated_at", cutoffIso)
+      .not("lat_short", "is", null)
+      .not("long_short", "is", null);
+
+    if (staleError) {
+      throw staleError;
+    }
+
+    let nullCount = 0;
+    if (staleRows && staleRows.length > 0) {
+      const staleIds = staleRows.map((r: any) => r.id);
+      const { error: nullErr } = await supabase
+        .from("locations")
+        .update({
+          lat_full: null,
+          long_full: null,
+          lat_short: null,
+          long_short: null,
+          updated_at: new Date().toISOString(),
+        })
+        .in("id", staleIds);
+
+      if (nullErr) {
+        throw nullErr;
+      }
+      nullCount = staleIds.length;
+    }
+
     const { data: conversations, error: convError } = await supabase
       .from("conversations")
       .select("*");
@@ -80,7 +119,7 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, updatedCount }),
+      JSON.stringify({ success: true, updatedCount, nullCount, thresholdSeconds }),
       {
         headers: {
           ...corsHeaders,

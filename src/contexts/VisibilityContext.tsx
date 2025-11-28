@@ -73,6 +73,7 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
   const locationWatchRef = useRef<(() => void) | null>(null);
   const hasRequestedPermissionRef = useRef(false);
   const userForcedInvisibleRef = useRef(false);
+  const lastCoordsRef = useRef<{ latitude: number; longitude: number } | null>(null);
 
   const stopLocationRefresh = useCallback(() => {
     if (locationWatchRef.current) {
@@ -89,6 +90,7 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
     locationWatchRef.current = watchLocation(
       async (coords) => {
         await updateUserLocation(coords.latitude, coords.longitude);
+        lastCoordsRef.current = { latitude: coords.latitude, longitude: coords.longitude };
         setLocationStatus('success');
       },
       async (error: LocationError) => {
@@ -104,9 +106,15 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
         } else if (error.code === 2) {
           console.warn('Position unavailable - will retry on next interval');
           setLocationStatus('position-unavailable');
+          if (lastCoordsRef.current) {
+            await updateUserLocation(lastCoordsRef.current.latitude, lastCoordsRef.current.longitude);
+          }
         } else if (error.code === 3) {
           console.warn('Location timeout - will retry on next interval');
           setLocationStatus('timeout');
+          if (lastCoordsRef.current) {
+            await updateUserLocation(lastCoordsRef.current.latitude, lastCoordsRef.current.longitude);
+          }
         }
       },
       LOCATION_REFRESH_INTERVAL
@@ -134,6 +142,7 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
       try {
         const coords = await getCurrentLocation();
         await updateUserLocation(coords.latitude, coords.longitude);
+        lastCoordsRef.current = { latitude: coords.latitude, longitude: coords.longitude };
         setLocationPermissionDenied(false);
         setLocationStatus('success');
         startLocationRefresh();

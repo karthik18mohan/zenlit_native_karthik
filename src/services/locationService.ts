@@ -164,7 +164,7 @@ export const watchLocation = (
           {
             accuracy: Location.Accuracy.Balanced,
             timeInterval: interval,
-            distanceInterval: 100,
+            distanceInterval: 0,
           },
           (location) => {
             if (isActive) {
