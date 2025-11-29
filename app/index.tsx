@@ -15,6 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { createShadowStyle } from '../src/utils/shadow';
 import GradientTitle from '../src/components/GradientTitle';
+import { persistHasSeenGetStarted } from '../src/utils/getStartedPreference';
 
 const BUTTON_GRADIENT = ['#2563eb', '#7e22ce'] as const;
 const BUTTON_ELEVATION = createShadowStyle({
@@ -77,6 +78,7 @@ const GetStartedScreen: React.FC = () => {
 
     setIsNavigating(true);
     runContainerAnimation(true);
+    void persistHasSeenGetStarted();
 
     setTimeout(() => {
       router.replace('/auth');
@@ -158,8 +160,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   buttonWrapper: {
-    width: '100%',
-    borderRadius: 20,
+    width: '70%',
+    maxWidth: 260,
+    minWidth: 200,
+    alignSelf: 'center',
+    borderRadius: 18,
     overflow: 'hidden',
     ...BUTTON_ELEVATION,
   },
@@ -168,13 +173,13 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   button: {
-    paddingVertical: 18,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   buttonLabel: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     letterSpacing: 0.5,
   },

@@ -7,12 +7,6 @@ import { logger } from '../utils/logger';
 
 export type NotificationPreferences = {
   messages: boolean;
-  proximity: boolean;
-  app_updates: boolean;
-  system: boolean;
-  quiet_hours_enabled: boolean;
-  quiet_hours_start: string;
-  quiet_hours_end: string;
   muted_conversations: string[];
 };
 
@@ -164,8 +158,8 @@ export function useNotifications() {
         .eq('id', user.id)
         .single();
 
-      const currentPrefs = profile?.notification_preferences || {};
-      const updatedPrefs = { ...currentPrefs, ...preferences };
+      const currentPrefs = normalizePreferences(profile?.notification_preferences);
+      const updatedPrefs = normalizePreferences({ ...currentPrefs, ...preferences });
 
       const { error } = await supabase
         .from('profiles')
@@ -214,15 +208,16 @@ export function useNotifications() {
 
     logger.info('Notifications', 'Handling notification response with data:', data);
 
-    // TODO: Implement navigation based on notification type
-    // Example:
-    // if (data.type === 'message') {
-    //   router.push(`/messages/${data.userId}`);
-    // } else if (data.type === 'proximity') {
-    //   router.push('/radar');
-    // } else if (data.type === 'app_update') {
-    //   // Show update modal
-    // }
+    // Routing is handled in the root layout; keep this stub for future deep link handling.
+  }
+
+  function normalizePreferences(preferences?: Partial<NotificationPreferences> | null): NotificationPreferences {
+    return {
+      messages: preferences?.messages !== false,
+      muted_conversations: Array.isArray(preferences?.muted_conversations)
+        ? (preferences?.muted_conversations as string[])
+        : [],
+    };
   }
 
   return {

@@ -20,8 +20,7 @@ import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { logger } from '../src/utils/logger';
 import { determinePostAuthRoute, ROUTES } from '../src/utils/authNavigation';
 import { useNotifications } from '../src/hooks/useNotifications';
-import { checkForAppUpdate, markUpdateDismissed, type AppVersion } from '../src/services/appVersionService';
-import { AppUpdateModal } from '../src/components/AppUpdateModal';
+import { readHasSeenGetStarted, persistHasSeenGetStarted } from '../src/utils/getStartedPreference';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -43,9 +42,7 @@ const RootLayout: React.FC = () => {
   const navigationInitialized = useRef(false);
   const lastAuthState = useRef<boolean | null>(null);
   const { notification } = useNotifications();
-  const [updateModalVisible, setUpdateModalVisible] = useState(false);
-  const [updateVersion, setUpdateVersion] = useState<AppVersion | null>(null);
-  const [isCriticalUpdate, setIsCriticalUpdate] = useState(false);
+  const [hasSeenGetStarted, setHasSeenGetStarted] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -55,6 +52,26 @@ const RootLayout: React.FC = () => {
       });
     }
   }, [pathname]);
+
+  useEffect(() => {
+    let isMounted = true;
+    readHasSeenGetStarted()
+      .then((seen) => {
+        if (isMounted) {
+          setHasSeenGetStarted(seen);
+        }
+      })
+      .catch((error) => {
+        logger.warn('App', 'Failed to load landing preference', error);
+        if (isMounted) {
+          setHasSeenGetStarted(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const checkInitialAuth = async () => {
@@ -97,6 +114,8 @@ const RootLayout: React.FC = () => {
         lastAuthState.current = hasSession;
 
         if (event === 'SIGNED_IN' && hasSession) {
+          setHasSeenGetStarted(true);
+          void persistHasSeenGetStarted();
           navigationInitialized.current = false;
           const targetRoute = await determinePostAuthRoute();
           router.replace(targetRoute ?? ROUTES.home);
@@ -112,14 +131,9 @@ const RootLayout: React.FC = () => {
   }, [router]);
 
   useEffect(() => {
-    if (isAuthenticated && Platform.OS !== 'web') {
-      checkForAppUpdate().then(({ hasUpdate, isCritical, version }) => {
-        if (hasUpdate && version) {
-          setUpdateVersion(version);
-          setIsCriticalUpdate(isCritical);
-          setUpdateModalVisible(true);
-        }
-      });
+    if (isAuthenticated) {
+      setHasSeenGetStarted(true);
+      void persistHasSeenGetStarted();
     }
   }, [isAuthenticated]);
 
@@ -130,25 +144,12 @@ const RootLayout: React.FC = () => {
 
       if (data.type === 'message' && data.senderId) {
         router.push(`/messages/${data.senderId}`);
-      } else if (data.type === 'proximity') {
-        router.push('/radar');
-      } else if (data.type === 'app_update') {
-        logger.info('Notification', 'App update notification received');
-        if (data.versionId && data.isCritical) {
-          checkForAppUpdate().then(({ hasUpdate, isCritical, version }) => {
-            if (hasUpdate && version) {
-              setUpdateVersion(version);
-              setIsCriticalUpdate(isCritical);
-              setUpdateModalVisible(true);
-            }
-          });
-        }
       }
     }
   }, [notification, router]);
 
   useEffect(() => {
-    if (!fontsLoaded || isCheckingAuth || isAuthenticated === null) {
+    if (!fontsLoaded || isCheckingAuth || isAuthenticated === null || hasSeenGetStarted === null) {
       return;
     }
 
@@ -159,6 +160,7 @@ const RootLayout: React.FC = () => {
     const currentSegment = segments[0];
     const inAuthGroup = currentSegment === 'auth' || currentSegment === 'onboarding';
     const onGetStarted = !currentSegment || currentSegment === 'index';
+    const skipLanding = hasSeenGetStarted === true;
 
     if (isAuthenticated) {
       if (inAuthGroup || onGetStarted) {
@@ -171,14 +173,20 @@ const RootLayout: React.FC = () => {
         });
       }
     } else {
-      if (!inAuthGroup && !onGetStarted) {
+      if (skipLanding && onGetStarted) {
+        navigationInitialized.current = true;
+        router.replace(ROUTES.auth);
+      } else if (skipLanding && !inAuthGroup && !onGetStarted) {
+        navigationInitialized.current = true;
+        router.replace(ROUTES.auth);
+      } else if (!skipLanding && !inAuthGroup && !onGetStarted) {
         navigationInitialized.current = true;
         router.replace(ROUTES.landing);
       }
     }
-  }, [isAuthenticated, segments, router, fontsLoaded, isCheckingAuth]);
+  }, [isAuthenticated, segments, router, fontsLoaded, isCheckingAuth, hasSeenGetStarted]);
 
-  if (!fontsLoaded || isCheckingAuth || isAuthenticated === null) {
+  if (!fontsLoaded || isCheckingAuth || isAuthenticated === null || hasSeenGetStarted === null) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563eb" />
@@ -190,13 +198,6 @@ const RootLayout: React.FC = () => {
   const inAuthGroup = segments[0] === 'auth' || segments[0] === 'onboarding';
   const onGetStarted = !segments[0] || segments[0] === 'index';
   const shouldShowNav = isAuthenticated && !inAuthGroup && !onGetStarted;
-
-  const handleDismissUpdate = () => {
-    if (updateVersion && !isCriticalUpdate) {
-      markUpdateDismissed(updateVersion.id);
-      setUpdateModalVisible(false);
-    }
-  };
 
   return (
     <SafeAreaProvider>
@@ -215,13 +216,6 @@ const RootLayout: React.FC = () => {
                 <Stack.Screen name="index" options={{ headerShown: false }} />
               </Stack>
               {shouldShowNav ? <Navigation /> : null}
-
-              <AppUpdateModal
-                visible={updateModalVisible}
-                version={updateVersion}
-                isCritical={isCriticalUpdate}
-                onDismiss={handleDismissUpdate}
-              />
             </View>
           </ProfileProvider>
         </MessagingProvider>

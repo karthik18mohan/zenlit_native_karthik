@@ -25,12 +25,6 @@ const NotificationSettingsScreen: React.FC = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     messages: true,
-    proximity: true,
-    app_updates: true,
-    system: true,
-    quiet_hours_enabled: false,
-    quiet_hours_start: '22:00',
-    quiet_hours_end: '08:00',
     muted_conversations: [],
   });
 
@@ -59,7 +53,7 @@ const NotificationSettingsScreen: React.FC = () => {
       } else if (profile) {
         setNotificationsEnabled(profile.notification_enabled ?? true);
         if (profile.notification_preferences) {
-          setPreferences(prev => ({ ...prev, ...profile.notification_preferences }));
+          setPreferences(normalizePreferences(profile.notification_preferences));
         }
       }
 
@@ -224,86 +218,13 @@ const NotificationSettingsScreen: React.FC = () => {
               disabled={saving || !notificationsEnabled || Platform.OS === 'web'}
             />
           </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingLabel}>Nearby Users</Text>
-              <Text style={styles.settingDescription}>
-                Alerts when new users are nearby on Radar
-              </Text>
-            </View>
-            <Switch
-              value={preferences.proximity}
-              onValueChange={(value) => handleTogglePreference('proximity', value)}
-              trackColor={{ false: '#334155', true: '#60a5fa' }}
-              thumbColor="#ffffff"
-              disabled={saving || !notificationsEnabled || Platform.OS === 'web'}
-            />
+          <View style={styles.infoCard}>
+            <Text style={styles.infoTitle}>Messaging Only</Text>
+            <Text style={styles.infoText}>
+              Push notifications are currently limited to direct messages. Other notification
+              types have been removed.
+            </Text>
           </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingLabel}>App Updates</Text>
-              <Text style={styles.settingDescription}>
-                New version and feature announcements
-              </Text>
-            </View>
-            <Switch
-              value={preferences.app_updates}
-              onValueChange={(value) => handleTogglePreference('app_updates', value)}
-              trackColor={{ false: '#334155', true: '#60a5fa' }}
-              thumbColor="#ffffff"
-              disabled={saving || !notificationsEnabled || Platform.OS === 'web'}
-            />
-          </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingLabel}>System Notifications</Text>
-              <Text style={styles.settingDescription}>
-                Maintenance and important announcements
-              </Text>
-            </View>
-            <Switch
-              value={preferences.system}
-              onValueChange={(value) => handleTogglePreference('system', value)}
-              trackColor={{ false: '#334155', true: '#60a5fa' }}
-              thumbColor="#ffffff"
-              disabled={saving || !notificationsEnabled || Platform.OS === 'web'}
-            />
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Quiet Hours</Text>
-          </View>
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingLabel}>Enable Quiet Hours</Text>
-              <Text style={styles.settingDescription}>
-                Silence notifications during specified hours
-              </Text>
-            </View>
-            <Switch
-              value={preferences.quiet_hours_enabled}
-              onValueChange={(value) => handleTogglePreference('quiet_hours_enabled', value)}
-              trackColor={{ false: '#334155', true: '#60a5fa' }}
-              thumbColor="#ffffff"
-              disabled={saving || !notificationsEnabled || Platform.OS === 'web'}
-            />
-          </View>
-
-          {preferences.quiet_hours_enabled && (
-            <View style={styles.quietHoursInfo}>
-              <Text style={styles.quietHoursText}>
-                Quiet hours: {preferences.quiet_hours_start} - {preferences.quiet_hours_end}
-              </Text>
-              <Text style={styles.quietHoursSubtext}>
-                You won't receive notifications during this time
-              </Text>
-            </View>
-          )}
         </View>
 
         {Platform.OS !== 'web' && hasToken && (
@@ -318,6 +239,17 @@ const NotificationSettingsScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
+
+function normalizePreferences(
+  prefs?: Partial<NotificationPreferences> | null
+): NotificationPreferences {
+  return {
+    messages: prefs?.messages !== false,
+    muted_conversations: Array.isArray(prefs?.muted_conversations)
+      ? (prefs.muted_conversations as string[])
+      : [],
+  };
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -406,20 +338,21 @@ const styles = StyleSheet.create({
     color: '#64748b',
     lineHeight: 20,
   },
-  quietHoursInfo: {
+  infoCard: {
     backgroundColor: '#0f172a',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
   },
-  quietHoursText: {
+  infoTitle: {
     fontSize: 15,
     color: '#ffffff',
-    marginBottom: 4,
+    marginBottom: 6,
+    fontWeight: '600',
   },
-  quietHoursSubtext: {
+  infoText: {
     fontSize: 13,
-    color: '#64748b',
+    color: '#94a3b8',
+    lineHeight: 18,
   },
   tokenLabel: {
     fontSize: 14,

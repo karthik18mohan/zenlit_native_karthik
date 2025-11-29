@@ -7,10 +7,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+type NotificationType = "message";
+
 interface NotificationRequest {
   userId?: string;
   userIds?: string[];
-  type: "message" | "proximity" | "app_update" | "system";
   title: string;
   body: string;
   data?: Record<string, any>;
@@ -39,8 +40,12 @@ Deno.serve(async (req: Request) => {
     const authHeader = req.headers.get("authorization") || "";
     const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     const functionSecret = Deno.env.get("FUNCTION_SECRET");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!functionSecret || bearerToken !== functionSecret) {
+    const allowedTokens = [functionSecret, supabaseServiceRoleKey, supabaseAnonKey].filter(Boolean) as string[];
+
+    if (allowedTokens.length > 0 && (!bearerToken || !allowedTokens.includes(bearerToken))) {
       return new Response(
         JSON.stringify({ success: false, error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -48,17 +53,26 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const expoAccessToken = Deno.env.get("EXPO_ACCESS_TOKEN");
 
     if (!expoAccessToken) {
       throw new Error("EXPO_ACCESS_TOKEN environment variable is not set");
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const requestData: NotificationRequest = await req.json();
-    const { userId, userIds, type, title, body, data, priority } = requestData;
+    const requestData: NotificationRequest & { type?: NotificationType } = await req.json();
+    const { userId, userIds, title, body, data, priority } = requestData;
+
+    if (requestData.type && requestData.type !== "message") {
+      return new Response(
+        JSON.stringify({ success: false, error: "Only message notifications are supported" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const notificationType: NotificationType = "message";
 
     let targetUserIds: string[] = [];
 
@@ -97,26 +111,14 @@ Deno.serve(async (req: Request) => {
 
     const filteredUsers = users.filter((user) => {
       const prefs = user.notification_preferences || {};
-      
-      if (type === "message" && !prefs.messages) return false;
-      if (type === "proximity" && !prefs.proximity) return false;
-      if (type === "app_update" && !prefs.app_updates) return false;
-      if (type === "system" && !prefs.system) return false;
+      const wantsMessages = prefs.messages !== false;
 
-      if (prefs.quiet_hours_enabled) {
-        const now = new Date();
-        const currentTime = now.toTimeString().slice(0, 5);
-        const start = prefs.quiet_hours_start || "22:00";
-        const end = prefs.quiet_hours_end || "08:00";
+      if (!wantsMessages) return false;
 
-        if (start > end) {
-          if (currentTime >= start || currentTime <= end) {
-            return false;
-          }
-        } else {
-          if (currentTime >= start && currentTime <= end) {
-            return false;
-          }
+      if (data?.senderId && prefs.muted_conversations) {
+        const muted = prefs.muted_conversations as string[];
+        if (Array.isArray(muted) && muted.includes(String(data.senderId))) {
+          return false;
         }
       }
 
@@ -141,15 +143,18 @@ Deno.serve(async (req: Request) => {
       to: user.expo_push_token,
       title,
       body,
-      data: { ...data, type },
-      priority: priority || "default",
+      data: { ...data, type: notificationType },
+      priority: priority || "high",
       sound: "default",
     }));
 
-    const chunks: ExpoPushMessage[][] = [];
+    const chunks: { messages: ExpoPushMessage[]; users: typeof filteredUsers }[] = [];
     const chunkSize = 100;
     for (let i = 0; i < messages.length; i += chunkSize) {
-      chunks.push(messages.slice(i, i + chunkSize));
+      chunks.push({
+        messages: messages.slice(i, i + chunkSize),
+        users: filteredUsers.slice(i, i + chunkSize),
+      });
     }
 
     let sentCount = 0;
@@ -165,7 +170,7 @@ Deno.serve(async (req: Request) => {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${expoAccessToken}`,
           },
-          body: JSON.stringify(chunk),
+          body: JSON.stringify(chunk.messages),
         });
 
         if (!response.ok) {
@@ -180,35 +185,15 @@ Deno.serve(async (req: Request) => {
 
         for (let i = 0; i < tickets.length; i++) {
           const ticket = tickets[i];
-          const user = filteredUsers[sentCount + i];
+          const user = chunk.users[i];
 
-          if (ticket.status === "ok") {
-            await supabase.from("push_notifications").insert({
-              user_id: user.id,
-              notification_type: type,
-              title,
-              body,
-              data: data || {},
-              delivered: true,
-              sent_at: new Date().toISOString(),
-            });
-          } else {
-            await supabase.from("push_notifications").insert({
-              user_id: user.id,
-              notification_type: type,
-              title,
-              body,
-              data: data || {},
-              delivered: false,
-              error: ticket.message || "Unknown error",
-              sent_at: new Date().toISOString(),
-            });
+          if (ticket.status !== "ok") {
             errors.push(`Failed for user ${user.id}: ${ticket.message}`);
             errorCount++;
+          } else {
+            sentCount++;
           }
         }
-
-        sentCount += tickets.filter((t: any) => t.status === "ok").length;
       } catch (error) {
         errors.push(`Exception sending chunk: ${error.message}`);
         errorCount += chunk.length;
