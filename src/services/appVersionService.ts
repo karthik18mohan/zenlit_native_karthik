@@ -173,6 +173,14 @@ export async function sendAppUpdateNotificationToAllUsers(versionId: string): Pr
       return { success: false, sent: 0, error: 'Not authenticated' };
     }
 
+    const adminEmails = (Constants.expoConfig?.extra as any)?.adminEmails as string[] | undefined;
+    const isAdminRole = (user.app_metadata as any)?.role === 'admin';
+    const hasAdminEmail = adminEmails?.includes(user.email ?? '') ?? false;
+
+    if (!isAdminRole && !hasAdminEmail) {
+      return { success: false, sent: 0, error: 'Not authorized to send app-wide notifications' };
+    }
+
     const { data: version, error: versionError } = await supabase
       .from('app_versions')
       .select('*')
@@ -210,8 +218,8 @@ export async function sendAppUpdateNotificationToAllUsers(versionId: string): Pr
     }
 
     const notificationTitle = version.is_critical
-      ? '🔴 Critical Update Available'
-      : '🎉 New Version Available';
+      ? 'Critical Update Available'
+      : 'New Version Available';
 
     const notificationBody = `Zenlit ${version.version} is now available!`;
 

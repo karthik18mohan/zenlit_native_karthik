@@ -12,6 +12,7 @@ import {
 } from '../services/locationService';
 
 const LOCATION_REFRESH_INTERVAL = 60000;
+const LOCATION_HEARTBEAT_INTERVAL = 60000;
 
 const getErrorName = (code: number): string => {
   switch (code) {
@@ -71,6 +72,7 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
   const [locationPermissionDenied, setLocationPermissionDenied] = useState(false);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>('not-attempted');
   const locationWatchRef = useRef<(() => void) | null>(null);
+  const locationHeartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasRequestedPermissionRef = useRef(false);
   const userForcedInvisibleRef = useRef(false);
   const lastCoordsRef = useRef<{ latitude: number; longitude: number } | null>(null);
@@ -80,12 +82,15 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
       locationWatchRef.current();
       locationWatchRef.current = null;
     }
+
+    if (locationHeartbeatRef.current) {
+      clearInterval(locationHeartbeatRef.current);
+      locationHeartbeatRef.current = null;
+    }
   }, []);
 
   const startLocationRefresh = useCallback(() => {
-    if (locationWatchRef.current) {
-      locationWatchRef.current();
-    }
+    stopLocationRefresh();
 
     locationWatchRef.current = watchLocation(
       async (coords) => {
@@ -119,7 +124,15 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
       },
       LOCATION_REFRESH_INTERVAL
     );
-  }, []);
+    locationHeartbeatRef.current = setInterval(() => {
+      if (!lastCoordsRef.current) {
+        return;
+      }
+      updateUserLocation(lastCoordsRef.current.latitude, lastCoordsRef.current.longitude).catch(
+        (err) => console.warn('Location heartbeat failed:', err)
+      );
+    }, LOCATION_HEARTBEAT_INTERVAL);
+  }, [stopLocationRefresh]);
 
   const setIsVisible = useCallback(
     (value: boolean, source: 'user' | 'auto' = 'user') => {
