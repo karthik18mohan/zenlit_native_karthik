@@ -51,6 +51,12 @@
       "expo-font",
       "expo-router",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Zenlit uses your location while you use Radar to show nearby people."
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/icon.png",

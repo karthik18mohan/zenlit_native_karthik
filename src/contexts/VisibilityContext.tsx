@@ -5,9 +5,10 @@ import type { SocialPlatformId } from '../constants/socialPlatforms';
 import { DEFAULT_VISIBLE_PLATFORMS } from '../constants/socialPlatforms';
 import { updateUserLocation, deleteUserLocation } from '../services';
 import {
+  checkLocationPermissionWithMeta,
   getCurrentLocation,
   watchLocation,
-  requestLocationPermission as requestLocationPermissionService,
+  requestLocationPermissionWithMeta,
   type LocationError,
 } from '../services/locationService';
 
@@ -33,7 +34,9 @@ export type LocationStatus =
   | 'success'
   | 'timeout'
   | 'position-unavailable'
-  | 'permission-denied';
+  | 'permission-denied'
+  | 'permission-blocked'
+  | 'services-disabled';
 
 type LocationPermissionRequestOptions = {
   autoEnable?: boolean;
@@ -51,6 +54,7 @@ type VisibilityContextValue = {
   locationPermissionDenied: boolean;
   locationStatus: LocationStatus;
   requestLocationPermission: (options?: LocationPermissionRequestOptions) => Promise<boolean>;
+  refreshLocationPermissionState: () => Promise<void>;
 };
 
 const VisibilityContext = createContext<VisibilityContextValue | undefined>(undefined);
@@ -73,7 +77,6 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
   const [locationStatus, setLocationStatus] = useState<LocationStatus>('not-attempted');
   const locationWatchRef = useRef<(() => void) | null>(null);
   const locationHeartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const hasRequestedPermissionRef = useRef(false);
   const userForcedInvisibleRef = useRef(false);
   const lastCoordsRef = useRef<{ latitude: number; longitude: number } | null>(null);
 
@@ -149,6 +152,39 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
     [],
   );
 
+  const refreshLocationPermissionState = useCallback(async () => {
+    try {
+      const snapshot = await checkLocationPermissionWithMeta();
+
+      if (!snapshot.servicesEnabled) {
+        setLocationPermissionDenied(true);
+        setLocationStatus('services-disabled');
+        return;
+      }
+
+      if (snapshot.status === 'granted') {
+        setLocationPermissionDenied(false);
+        if (!isVisible) {
+          setLocationStatus('not-attempted');
+        }
+        return;
+      }
+
+      if (snapshot.status === 'denied') {
+        setLocationPermissionDenied(true);
+        setLocationStatus(snapshot.canAskAgain ? 'permission-denied' : 'permission-blocked');
+        return;
+      }
+
+      setLocationPermissionDenied(false);
+      if (!isVisible) {
+        setLocationStatus('not-attempted');
+      }
+    } catch (error) {
+      console.error('Failed to refresh location permission state:', error);
+    }
+  }, [isVisible]);
+
   const handleLocationUpdate = useCallback(async () => {
     if (isVisible) {
       setLocationStatus('fetching');
@@ -195,6 +231,10 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
     };
   }, [handleLocationUpdate]);
 
+  useEffect(() => {
+    refreshLocationPermissionState();
+  }, [refreshLocationPermissionState]);
+
   const toggleAccount = (platformId: SocialPlatformId) => {
     setSelectedAccounts((prev) =>
       prev.includes(platformId)
@@ -215,12 +255,29 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
     options: LocationPermissionRequestOptions = {},
   ): Promise<boolean> => {
     const { autoEnable = true } = options;
-    hasRequestedPermissionRef.current = true;
 
     try {
-      const permissionStatus = await requestLocationPermissionService();
+      const current = await checkLocationPermissionWithMeta();
 
-      if (permissionStatus === 'granted' || permissionStatus === 'undetermined') {
+      if (!current.servicesEnabled) {
+        setLocationPermissionDenied(true);
+        setLocationStatus('services-disabled');
+        setIsVisible(false, 'auto');
+        return false;
+      }
+
+      const permission = current.status === 'undetermined'
+        ? await requestLocationPermissionWithMeta()
+        : current;
+
+      if (!permission.servicesEnabled) {
+        setLocationPermissionDenied(true);
+        setLocationStatus('services-disabled');
+        setIsVisible(false, 'auto');
+        return false;
+      }
+
+      if (permission.status === 'granted') {
         setLocationStatus('fetching');
         try {
           const coords = await getCurrentLocation();
@@ -240,7 +297,8 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
             await deleteUserLocation();
             setIsVisible(false, 'auto');
             return false;
-          } else if (error.code === 2) {
+          }
+          if (error.code === 2) {
             console.warn('Initial position unavailable on permission request - will start watch anyway');
             setLocationStatus('position-unavailable');
             if (autoEnable) {
@@ -248,7 +306,8 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
             }
             startLocationRefresh();
             return true;
-          } else if (error.code === 3) {
+          }
+          if (error.code === 3) {
             console.warn('Initial location timeout on permission request - will start watch anyway');
             setLocationStatus('timeout');
             if (autoEnable) {
@@ -259,13 +318,13 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
           }
           return false;
         }
-      } else {
-        setLocationPermissionDenied(true);
-        setLocationStatus('permission-denied');
-        await deleteUserLocation();
-        setIsVisible(false, 'auto');
-        return false;
       }
+
+      setLocationPermissionDenied(true);
+      setLocationStatus(permission.canAskAgain ? 'permission-denied' : 'permission-blocked');
+      await deleteUserLocation();
+      setIsVisible(false, 'auto');
+      return false;
     } catch (error) {
       console.error('Failed to request location permission:', error);
       setLocationPermissionDenied(true);
@@ -273,13 +332,6 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
       return false;
     }
   }, [setIsVisible, startLocationRefresh]);
-
-  useEffect(() => {
-    if (!hasRequestedPermissionRef.current) {
-      hasRequestedPermissionRef.current = true;
-      requestLocationPermission({ autoEnable: true });
-    }
-  }, [requestLocationPermission]);
 
   const value = useMemo(
     () => ({
@@ -294,8 +346,18 @@ export const VisibilityProvider: React.FC<PropsWithChildren> = ({ children }) =>
       locationPermissionDenied,
       locationStatus,
       requestLocationPermission,
+      refreshLocationPermissionState,
     }),
-    [isVisible, radiusKm, selectedAccounts, locationPermissionDenied, locationStatus, setIsVisible, requestLocationPermission],
+    [
+      isVisible,
+      radiusKm,
+      selectedAccounts,
+      locationPermissionDenied,
+      locationStatus,
+      setIsVisible,
+      requestLocationPermission,
+      refreshLocationPermissionState,
+    ],
   );
 
   return <VisibilityContext.Provider value={value}>{children}</VisibilityContext.Provider>;
