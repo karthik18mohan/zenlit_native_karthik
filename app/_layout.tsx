@@ -160,6 +160,7 @@ const RootLayout: React.FC = () => {
     const currentSegment = segments[0];
     const inAuthGroup = currentSegment === 'auth' || currentSegment === 'onboarding';
     const isPublicDeletePage = currentSegment === 'delete-account';
+    const isPublicLegalPage = currentSegment === 'privacy' || currentSegment === 'terms';
     const onGetStarted = !currentSegment || currentSegment === 'index';
     const skipLanding = hasSeenGetStarted === true;
 
@@ -174,7 +175,7 @@ const RootLayout: React.FC = () => {
         });
       }
     } else {
-      if (isPublicDeletePage) {
+      if (isPublicDeletePage || isPublicLegalPage) {
         return;
       }
       if (skipLanding && onGetStarted) {
@@ -202,7 +203,8 @@ const RootLayout: React.FC = () => {
   const inAuthGroup = segments[0] === 'auth' || segments[0] === 'onboarding';
   const onGetStarted = !segments[0] || segments[0] === 'index';
   const isPublicDeletePage = segments[0] === 'delete-account';
-  const shouldShowNav = isAuthenticated && !inAuthGroup && !onGetStarted && !isPublicDeletePage;
+  const isPublicLegalPage = segments[0] === 'privacy' || segments[0] === 'terms';
+  const shouldShowNav = isAuthenticated && !inAuthGroup && !onGetStarted && !isPublicDeletePage && !isPublicLegalPage;
 
   return (
     <SafeAreaProvider>
