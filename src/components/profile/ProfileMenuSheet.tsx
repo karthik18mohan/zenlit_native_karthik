@@ -8,6 +8,7 @@ export type ProfileMenuSheetProps = {
   onEditProfile: () => void;
   onFeedback: () => void;
   onLogout: () => void;
+  onDeleteAccount: () => void;
 };
 
 const ProfileMenuSheet: React.FC<ProfileMenuSheetProps> = ({
@@ -16,6 +17,7 @@ const ProfileMenuSheet: React.FC<ProfileMenuSheetProps> = ({
   onEditProfile,
   onFeedback,
   onLogout,
+  onDeleteAccount,
 }) => {
   const translateY = useRef(new Animated.Value(1)).current;
 
@@ -67,6 +69,13 @@ const ProfileMenuSheet: React.FC<ProfileMenuSheetProps> = ({
               <Feather name="log-out" size={18} color="#ffffff" />
             </View>
             <Text style={styles.rowLabel}>Logout</Text>
+          </Pressable>
+
+          <Pressable style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]} onPress={() => { onRequestClose(); onDeleteAccount(); }}>
+            <View style={[styles.iconWrap, styles.destructiveIconWrap]}>
+              <Feather name="trash-2" size={18} color="#fca5a5" />
+            </View>
+            <Text style={[styles.rowLabel, styles.destructiveLabel]}>Delete Account</Text>
           </Pressable>
         </Animated.View>
       </View>
@@ -140,6 +149,13 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  destructiveLabel: {
+    color: '#fca5a5',
+  },
+  destructiveIconWrap: {
+    borderWidth: 1,
+    borderColor: 'rgba(248,113,113,0.5)',
   },
 });
 
