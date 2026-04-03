@@ -3,14 +3,19 @@
 Zenlit now ships public legal routes using Expo Router:
 - `/privacy`
 - `/terms`
+- `/delete-account`
+- `/profile/legal` (in-app legal hub)
 
 These pages are implemented as app routes so they are exported in the web build and can be reviewed by Play Store reviewers on public HTTPS URLs.
 
 ## Source files
 - Privacy page route: `app/privacy.tsx`
 - Terms page route: `app/terms.tsx`
+- Account deletion route: `app/delete-account.tsx`
 - Auth consent checkbox gate: `app/auth/index.tsx`
 - Existing-user legal gate: `app/onboarding/legal-consent.tsx`
+- Profile legal hub route: `app/profile/legal.tsx`
+- Profile menu legal entry: `src/components/profile/ProfileMenuSheet.tsx`
 - Shared legal constants (URLs, dates, versions, support email): `src/constants/legal.ts`
 - Legal acceptance persistence service: `src/services/legalAcceptanceService.ts`
 - Reusable legal page UI component: `src/components/legal/LegalDocumentScreen.tsx`
@@ -98,4 +103,3 @@ Set these values before creating a Play production submission:
 Quick pre-submit checks:
 - `npx expo config --type public`
 - `npx tsc --noEmit`
-
