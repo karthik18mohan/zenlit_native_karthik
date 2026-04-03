@@ -4,6 +4,7 @@ import fs from 'node:fs';
 
 const authNavigationSource = fs.readFileSync('src/utils/authNavigation.ts', 'utf8');
 const deleteAccountPageSource = fs.readFileSync('app/delete-account.tsx', 'utf8');
+const rootLayoutSource = fs.readFileSync('app/_layout.tsx', 'utf8');
 
 test('post-auth routing enforces legal re-acceptance before onboarding/profile checks', () => {
   const legalCheckIndex = authNavigationSource.indexOf('hasCurrentUserAcceptedLatestLegal');
@@ -21,4 +22,10 @@ test('web account deletion requires OTP verification before final destructive ac
   assert.match(deleteAccountPageSource, /const \[isVerified, setIsVerified\] = useState\(false\);/);
   assert.match(deleteAccountPageSource, /if \(!isVerified \|\| !canDelete \|\| deleting\) \{/);
   assert.match(deleteAccountPageSource, /disabled=\{!isVerified \|\| !canDelete \|\| deleting\}/);
+});
+
+
+test('root layout blocks authenticated users from app routes until legal consent is completed', () => {
+  assert.match(rootLayoutSource, /if \(!hasAcceptedLegal && !onLegalConsent && !isPublicDeletePage\)/);
+  assert.match(rootLayoutSource, /router\.replace\(ROUTES\.legalConsent\)/);
 });

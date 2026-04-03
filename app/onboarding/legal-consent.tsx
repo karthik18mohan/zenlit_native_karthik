@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { LEGAL_URLS } from '../../src/constants/legal';
+import { LEGAL_EFFECTIVE_DATE, LEGAL_URLS, PRIVACY_VERSION, TERMS_VERSION } from '../../src/constants/legal';
 import { saveCurrentUserLegalAcceptance } from '../../src/services/legalAcceptanceService';
 import { ROUTES, determinePostAuthRoute } from '../../src/utils/authNavigation';
 import { supabase } from '../../src/lib/supabase';
@@ -60,9 +60,12 @@ const LegalConsentScreen: React.FC = () => {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.card}>
-          <Text style={styles.title}>Review and Continue</Text>
+          <Text style={styles.title}>Legal Consent Required</Text>
           <Text style={styles.description}>
-            To keep using Zenlit, please review and accept our legal terms.
+            Before entering Zenlit, you must explicitly accept both our Terms of Service and Privacy Policy.
+          </Text>
+          <Text style={styles.versionMeta}>
+            Terms {TERMS_VERSION} · Privacy {PRIVACY_VERSION} · Effective {LEGAL_EFFECTIVE_DATE}
           </Text>
 
           <Pressable
@@ -135,6 +138,11 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontSize: 14,
     lineHeight: 20,
+  },
+  versionMeta: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    lineHeight: 18,
   },
   checkboxRow: {
     flexDirection: 'row',
