@@ -13,7 +13,7 @@ Zenlit is a nearby social app with profile setup, posts, direct messaging, and o
 - **Account data:** email used for OTP/passwordless authentication.
 - **Profile data:** display name, username, date of birth, gender.
 - **Optional profile data:** bio, social handles, profile image, banner image.
-- **Location data:** foreground location coordinates and rounded coordinates used to match nearby users.
+- **Location data:** foreground location coordinates and rounded coordinates used to match nearby users when you enable Radar visibility.
 - **Messaging data:** message text, sender/receiver IDs, timestamps, delivery/read metadata.
 - **Post data:** post text, optional post image, timestamps.
 - **Notification data:** Expo push token and notification preferences.
@@ -26,6 +26,13 @@ Zenlit is a nearby social app with profile setup, posts, direct messaging, and o
 - Deliver direct messages.
 - Send message push notifications (if enabled).
 - Support account deletion and service operations.
+
+
+## Location permission flow
+- Zenlit shows an in-app explanation before any system location prompt.
+- Zenlit requests **foreground** location only (no background location).
+- You can continue using Zenlit without granting location, but Radar discovery/visibility stays limited.
+- If permission is denied or blocked, Zenlit shows recovery steps including retry and app settings entry points.
 
 ## Where data is stored
 - **Supabase** for auth, database, storage buckets, and edge functions.

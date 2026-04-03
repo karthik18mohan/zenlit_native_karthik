@@ -19,6 +19,12 @@ export type LocationError = {
 
 export type LocationPermissionStatus = 'granted' | 'denied' | 'undetermined';
 
+export type LocationPermissionSnapshot = {
+  status: LocationPermissionStatus;
+  canAskAgain: boolean;
+  servicesEnabled: boolean;
+};
+
 const getErrorCode = (error: any): number => {
   if (Platform.OS === 'web') {
     return error.code || 0;
@@ -26,45 +32,89 @@ const getErrorCode = (error: any): number => {
   return 1;
 };
 
+const normalizeStatus = (status: Location.PermissionStatus): LocationPermissionStatus => {
+  if (status === 'granted') {
+    return 'granted';
+  }
+  if (status === 'denied') {
+    return 'denied';
+  }
+  return 'undetermined';
+};
+
+const getWebPermissionSnapshot = (): LocationPermissionSnapshot => {
+  if (!('geolocation' in navigator)) {
+    return {
+      status: 'denied',
+      canAskAgain: false,
+      servicesEnabled: false,
+    };
+  }
+
+  return {
+    status: 'undetermined',
+    canAskAgain: true,
+    servicesEnabled: true,
+  };
+};
+
 export const requestLocationPermission = async (): Promise<LocationPermissionStatus> => {
+  const permission = await requestLocationPermissionWithMeta();
+  return permission.status;
+};
+
+export const requestLocationPermissionWithMeta = async (): Promise<LocationPermissionSnapshot> => {
   if (Platform.OS === 'web') {
-    if (!('geolocation' in navigator)) {
-      return 'denied';
-    }
-    return 'undetermined';
+    return getWebPermissionSnapshot();
   }
 
   try {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status === 'granted') {
-      return 'granted';
-    }
-    return 'denied';
+    const servicesEnabled = await Location.hasServicesEnabledAsync();
+    const response = await Location.requestForegroundPermissionsAsync();
+
+    return {
+      status: normalizeStatus(response.status),
+      canAskAgain: response.canAskAgain,
+      servicesEnabled,
+    };
   } catch (error) {
     console.error('Error requesting location permission:', error);
-    return 'denied';
+    return {
+      status: 'denied',
+      canAskAgain: false,
+      servicesEnabled: false,
+    };
   }
 };
 
 export const checkLocationPermission = async (): Promise<LocationPermissionStatus> => {
+  const permission = await checkLocationPermissionWithMeta();
+  return permission.status;
+};
+
+export const checkLocationPermissionWithMeta = async (): Promise<LocationPermissionSnapshot> => {
   if (Platform.OS === 'web') {
-    if (!('geolocation' in navigator)) {
-      return 'denied';
-    }
-    return 'undetermined';
+    return getWebPermissionSnapshot();
   }
 
   try {
-    const { status } = await Location.getForegroundPermissionsAsync();
-    if (status === 'granted') {
-      return 'granted';
-    } else if (status === 'denied') {
-      return 'denied';
-    }
-    return 'undetermined';
+    const [servicesEnabled, response] = await Promise.all([
+      Location.hasServicesEnabledAsync(),
+      Location.getForegroundPermissionsAsync(),
+    ]);
+
+    return {
+      status: normalizeStatus(response.status),
+      canAskAgain: response.canAskAgain,
+      servicesEnabled,
+    };
   } catch (error) {
     console.error('Error checking location permission:', error);
-    return 'denied';
+    return {
+      status: 'denied',
+      canAskAgain: false,
+      servicesEnabled: false,
+    };
   }
 };
 
@@ -154,45 +204,45 @@ export const watchLocation = (
         intervalId = null;
       }
     };
-  } else {
-    let subscription: Location.LocationSubscription | null = null;
-    let isActive = true;
-
-    const startWatching = async () => {
-      try {
-        subscription = await Location.watchPositionAsync(
-          {
-            accuracy: Location.Accuracy.Balanced,
-            timeInterval: interval,
-            distanceInterval: 0,
-          },
-          (location) => {
-            if (isActive) {
-              onSuccess({
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-              });
-            }
-          }
-        );
-      } catch (error: any) {
-        if (isActive) {
-          onError({
-            code: getErrorCode(error),
-            message: error.message || 'Failed to watch location',
-          });
-        }
-      }
-    };
-
-    startWatching();
-
-    return () => {
-      isActive = false;
-      if (subscription) {
-        subscription.remove();
-        subscription = null;
-      }
-    };
   }
+
+  let subscription: Location.LocationSubscription | null = null;
+  let isActive = true;
+
+  const startWatching = async () => {
+    try {
+      subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: interval,
+          distanceInterval: 0,
+        },
+        (location) => {
+          if (isActive) {
+            onSuccess({
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+            });
+          }
+        }
+      );
+    } catch (error: any) {
+      if (isActive) {
+        onError({
+          code: getErrorCode(error),
+          message: error.message || 'Failed to watch location',
+        });
+      }
+    }
+  };
+
+  startWatching();
+
+  return () => {
+    isActive = false;
+    if (subscription) {
+      subscription.remove();
+      subscription = null;
+    }
+  };
 };

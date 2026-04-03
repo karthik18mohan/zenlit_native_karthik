@@ -36,7 +36,7 @@ const PrivacyScreen: React.FC = () => {
         </LegalBullet>
         <LegalBullet>
           Location data: foreground location (latitude/longitude), including a less precise rounded
-          coordinate used to find nearby users.
+          coordinate used to find nearby users when you enable Radar visibility.
         </LegalBullet>
         <LegalBullet>
           Messaging data: message content, sender/receiver IDs, timestamps, delivery/read status.
@@ -64,9 +64,11 @@ const PrivacyScreen: React.FC = () => {
 
       <LegalSection heading="Location details">
         <LegalParagraph>
-          Zenlit requests foreground location permission. We use location while the app is in use to
-          update visibility and nearby discovery. We store both precise coordinates and rounded
-          coordinates; rounded coordinates are used for nearby matching logic.
+          Zenlit shows an in-app explanation before requesting foreground location permission. We only
+          request location while the app is in use to power Radar visibility and nearby discovery.
+          If you decline, you can still use the rest of the app with limited Radar functionality.
+          We store both precise coordinates and rounded coordinates; rounded coordinates are used
+          for nearby matching logic.
         </LegalParagraph>
       </LegalSection>
 
