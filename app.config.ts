@@ -11,6 +11,8 @@ type PluginConfig = NonNullable<ExpoConfig["plugins"]>[number];
 export default ({ config }: ConfigContext): ExpoConfig => {
   const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+  const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL;
+  const supportEmail = process.env.EXPO_PUBLIC_SUPPORT_EMAIL;
   // Google OAuth configuration removed
 
   const buildPropertiesPluginConfig: PluginConfig = [
@@ -96,6 +98,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ...(config.extra ?? {}),
       supabaseUrl,
       supabaseAnonKey,
+      webBaseUrl,
+      supportEmail,
       eas: config.extra?.eas,
       router: config.extra?.router,
     },

@@ -7,6 +7,7 @@ export type ProfileMenuSheetProps = {
   onRequestClose: () => void;
   onEditProfile: () => void;
   onFeedback: () => void;
+  onLegal: () => void;
   onLogout: () => void;
   onDeleteAccount: () => void;
 };
@@ -16,6 +17,7 @@ const ProfileMenuSheet: React.FC<ProfileMenuSheetProps> = ({
   onRequestClose,
   onEditProfile,
   onFeedback,
+  onLegal,
   onLogout,
   onDeleteAccount,
 }) => {
@@ -62,6 +64,13 @@ const ProfileMenuSheet: React.FC<ProfileMenuSheetProps> = ({
               <Feather name="message-square" size={18} color="#ffffff" />
             </View>
             <Text style={styles.rowLabel}>Give Feedback</Text>
+          </Pressable>
+
+          <Pressable style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]} onPress={() => { onRequestClose(); onLegal(); }}>
+            <View style={styles.iconWrap}>
+              <Feather name="shield" size={18} color="#ffffff" />
+            </View>
+            <Text style={styles.rowLabel}>Privacy & Terms</Text>
           </Pressable>
 
           <Pressable style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]} onPress={() => { onRequestClose(); onLogout(); }}>

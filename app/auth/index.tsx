@@ -13,6 +13,7 @@ import {
   TextInput,
   View,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,6 +24,7 @@ import { createShadowStyle } from '../../src/utils/shadow';
 import GradientTitle from '../../src/components/GradientTitle';
 import { supabase, supabaseReady } from '../../src/lib/supabase';
 import { logger } from '../../src/utils/logger';
+import { LEGAL_URLS } from '../../src/constants/legal';
 
 const PRIMARY_GRADIENT = ['#2563eb', '#7e22ce'] as const;
 const DIVIDER_LINE_COLORS = [
@@ -79,6 +81,15 @@ const AuthScreen: React.FC = () => {
   const isValidEmail = useMemo(() => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   }, [email]);
+
+
+  const openTerms = useCallback(() => {
+    Linking.openURL(LEGAL_URLS.terms);
+  }, []);
+
+  const openPrivacy = useCallback(() => {
+    Linking.openURL(LEGAL_URLS.privacy);
+  }, []);
 
   const handleEmail = async () => {
     if (!isValidEmail || emailLoading) {
@@ -217,8 +228,10 @@ const AuthScreen: React.FC = () => {
           </Animated.View>
 
           <Text style={styles.legalText}>
-            By continuing, you agree to our <Text style={styles.legalLink}>Terms of Service</Text> and{' '}
-            <Text style={styles.legalLink}>Privacy Policy</Text>
+            By continuing, you agree to our{' '}
+            <Text style={styles.legalLink} onPress={openTerms}>Terms of Service</Text>
+            {' '}and{' '}
+            <Text style={styles.legalLink} onPress={openPrivacy}>Privacy Policy</Text>
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
