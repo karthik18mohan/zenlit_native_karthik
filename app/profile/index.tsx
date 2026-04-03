@@ -38,7 +38,6 @@ import {
 import { useProfile } from '../../src/contexts/ProfileContext';
 import { supabase } from '../../src/lib/supabase';
 import { getPostLogoutRoute } from '../../src/utils/authNavigation';
-import { LEGAL_URLS } from '../../src/constants/legal';
 
 const SOCIAL_ORDER: Array<'instagram' | 'linkedin' | 'twitter'> = [
   'instagram',
@@ -142,10 +141,10 @@ const ProfileScreen: React.FC = () => {
   }, [router]);
 
 
-  const handleLegal = useCallback(() => {
+  const handleLegalHub = useCallback(() => {
     setMenuOpen(false);
-    Linking.openURL(LEGAL_URLS.privacy);
-  }, []);
+    router.push('/profile/legal');
+  }, [router]);
 
   const handleLogout = useCallback(() => {
     setMenuOpen(false);
@@ -285,7 +284,7 @@ const ProfileScreen: React.FC = () => {
         onRequestClose={handleCloseMenu}
         onEditProfile={handleEditProfile}
         onFeedback={handleFeedback}
-        onLegal={handleLegal}
+        onLegalHub={handleLegalHub}
         onLogout={handleLogout}
         onDeleteAccount={handleDeleteAccountPress}
       />
