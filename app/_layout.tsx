@@ -159,6 +159,7 @@ const RootLayout: React.FC = () => {
 
     const currentSegment = segments[0];
     const inAuthGroup = currentSegment === 'auth' || currentSegment === 'onboarding';
+    const isPublicDeletePage = currentSegment === 'delete-account';
     const onGetStarted = !currentSegment || currentSegment === 'index';
     const skipLanding = hasSeenGetStarted === true;
 
@@ -173,6 +174,9 @@ const RootLayout: React.FC = () => {
         });
       }
     } else {
+      if (isPublicDeletePage) {
+        return;
+      }
       if (skipLanding && onGetStarted) {
         navigationInitialized.current = true;
         router.replace(ROUTES.auth);
@@ -197,7 +201,8 @@ const RootLayout: React.FC = () => {
 
   const inAuthGroup = segments[0] === 'auth' || segments[0] === 'onboarding';
   const onGetStarted = !segments[0] || segments[0] === 'index';
-  const shouldShowNav = isAuthenticated && !inAuthGroup && !onGetStarted;
+  const isPublicDeletePage = segments[0] === 'delete-account';
+  const shouldShowNav = isAuthenticated && !inAuthGroup && !onGetStarted && !isPublicDeletePage;
 
   return (
     <SafeAreaProvider>

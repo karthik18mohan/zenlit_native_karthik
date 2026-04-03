@@ -72,3 +72,13 @@
 - All tables reside in schema public and have RLS enabled.
 - Unique constraints exist on profiles.email and profiles.user_name.
 - Conversation querying is optimized by compound indexes on messages.
+
+## Account deletion endpoint
+
+- Edge Function: `delete-account`
+- Auth: user JWT required in `Authorization: Bearer <token>`
+- Executor: service-role Supabase client inside function
+- Deletes user-linked storage (`profile-images`, `post-images`, `feedback-images`) under `{user_id}/`
+- Deletes `feedback` rows for user
+- Deletes `profiles` row (cascades social_links, posts, locations, messages, conversations, push rows, user_app_updates)
+- Deletes `auth.users` row via admin API

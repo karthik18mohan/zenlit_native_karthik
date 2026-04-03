@@ -181,6 +181,9 @@ const makeStub = () => {
     },
     from: (table: string) => createQueryBuilder(),
     rpc: (fn: string, params?: any) => unsupported(`rpc.${fn}`),
+    functions: {
+      invoke: (name: string, options?: any) => unsupported(`functions.${name}`),
+    },
     storage: {
       from: (bucket: string) => ({
         upload: (path: string, file: any, options?: any) => unsupported('storage.upload'),

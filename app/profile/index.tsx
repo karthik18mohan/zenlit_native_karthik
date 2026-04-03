@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   ImageSourcePropType,
@@ -20,13 +21,20 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import AppHeader from '../../src/components/AppHeader';
 import LogoutConfirmation from '../../src/components/LogoutConfirmation';
 import ProfileMenuSheet from '../../src/components/profile/ProfileMenuSheet';
+import DeleteAccountDialogs from '../../src/components/profile/DeleteAccountDialogs';
 import Post from '../../src/components/Post';
 import {
   SOCIAL_PLATFORMS,
   ensureSocialUrl,
   getTwitterHandle,
 } from '../../src/constants/socialPlatforms';
-import { getUserPosts, deletePost as deletePostDb, Post as PostType } from '../../src/services';
+import {
+  clearLocalUserData,
+  deleteCurrentAccount,
+  getUserPosts,
+  deletePost as deletePostDb,
+  Post as PostType,
+} from '../../src/services';
 import { useProfile } from '../../src/contexts/ProfileContext';
 import { supabase } from '../../src/lib/supabase';
 import { getPostLogoutRoute } from '../../src/utils/authNavigation';
@@ -64,6 +72,8 @@ const ProfileScreen: React.FC = () => {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
   const { profile, socialLinks, isRefreshing, error, refresh } = useProfile();
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,6 +148,47 @@ const ProfileScreen: React.FC = () => {
   const handleCancelLogout = useCallback(() => {
     setLogoutOpen(false);
   }, []);
+
+  const handleDeleteAccountPress = useCallback(() => {
+    setMenuOpen(false);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const handleCloseDeleteDialog = useCallback(() => {
+    if (!deleteAccountLoading) {
+      setDeleteDialogOpen(false);
+    }
+  }, [deleteAccountLoading]);
+
+  const handleConfirmDeleteAccount = useCallback(async () => {
+    setDeleteAccountLoading(true);
+
+    const result = await deleteCurrentAccount();
+
+    if (!result.success) {
+      setDeleteAccountLoading(false);
+      const subtitle = result.requiresReauth
+        ? 'Please sign in again and retry account deletion.'
+        : result.error || 'Unable to delete your account at the moment.';
+      Alert.alert('Account deletion failed', subtitle);
+      return;
+    }
+
+    if (result.warnings.length) {
+      Alert.alert('Account deleted with warnings', result.warnings.join('\n'));
+    }
+
+    setDeleteDialogOpen(false);
+    setDeleteAccountLoading(false);
+
+    await clearLocalUserData();
+
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+    } catch {}
+
+    router.replace(getPostLogoutRoute());
+  }, [router]);
 
   const handleConfirmLogout = useCallback(async () => {
     setLogoutOpen(false);
@@ -228,11 +279,18 @@ const ProfileScreen: React.FC = () => {
         onEditProfile={handleEditProfile}
         onFeedback={handleFeedback}
         onLogout={handleLogout}
+        onDeleteAccount={handleDeleteAccountPress}
       />
       <LogoutConfirmation
         visible={logoutOpen}
         onCancel={handleCancelLogout}
         onConfirm={handleConfirmLogout}
+      />
+      <DeleteAccountDialogs
+        visible={deleteDialogOpen}
+        loading={deleteAccountLoading}
+        onClose={handleCloseDeleteDialog}
+        onConfirm={handleConfirmDeleteAccount}
       />
       <FlatList
         data={posts}

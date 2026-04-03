@@ -36,3 +36,10 @@ export {
   markMessagesRead,
   getUnreadCounts,
 } from './messagingService';
+
+export {
+  deleteCurrentAccount,
+  clearLocalUserData,
+  requestDeletionOtp,
+  verifyDeletionOtp,
+} from './accountDeletionService';
