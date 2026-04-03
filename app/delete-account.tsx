@@ -28,6 +28,7 @@ const DeleteAccountWebPage: React.FC = () => {
   const [otp, setOtp] = useState('');
   const [typedDelete, setTypedDelete] = useState('');
   const [codeSent, setCodeSent] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -51,6 +52,7 @@ const DeleteAccountWebPage: React.FC = () => {
       return;
     }
 
+    setIsVerified(false);
     setCodeSent(true);
     setStatus('Verification code sent. Check your inbox.');
   };
@@ -69,11 +71,12 @@ const DeleteAccountWebPage: React.FC = () => {
       return;
     }
 
+    setIsVerified(true);
     setStatus('Identity verified. You can now permanently delete your account.');
   };
 
   const handleDelete = async () => {
-    if (!canDelete || deleting) {
+    if (!isVerified || !canDelete || deleting) {
       return;
     }
 
@@ -93,6 +96,7 @@ const DeleteAccountWebPage: React.FC = () => {
     setStatus('Your account has been permanently deleted.');
     setOtp('');
     setTypedDelete('');
+    setIsVerified(false);
   };
 
   return (
@@ -140,6 +144,9 @@ const DeleteAccountWebPage: React.FC = () => {
             ) : null}
 
             <Text style={[styles.label, styles.blockTop]}>3) Type DELETE and confirm</Text>
+            {!isVerified ? (
+              <Text style={styles.inlineHelpText}>Complete step 2 before permanent deletion is enabled.</Text>
+            ) : null}
             <TextInput
               value={typedDelete}
               onChangeText={setTypedDelete}
@@ -149,9 +156,9 @@ const DeleteAccountWebPage: React.FC = () => {
               placeholderTextColor="#64748b"
             />
             <Pressable
-              style={[styles.deleteButton, !canDelete ? styles.disabled : null]}
+              style={[styles.deleteButton, (!isVerified || !canDelete) ? styles.disabled : null]}
               onPress={handleDelete}
-              disabled={!canDelete || deleting}
+              disabled={!isVerified || !canDelete || deleting}
             >
               {deleting ? <ActivityIndicator color="#fff" /> : <Text style={styles.deleteButtonLabel}>Permanently delete account</Text>}
             </Pressable>
@@ -203,6 +210,7 @@ const styles = StyleSheet.create({
   deleteButtonLabel: { color: '#fff', fontWeight: '800' },
   disabled: { opacity: 0.45 },
   status: { marginTop: 12, color: '#93c5fd' },
+  inlineHelpText: { marginBottom: 8, color: '#fda4af', fontSize: 12 },
 });
 
 export default DeleteAccountWebPage;
