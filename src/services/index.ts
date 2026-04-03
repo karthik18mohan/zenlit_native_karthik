@@ -43,3 +43,9 @@ export {
   requestDeletionOtp,
   verifyDeletionOtp,
 } from './accountDeletionService';
+
+export {
+  getCurrentUserLegalAcceptance,
+  hasCurrentUserAcceptedLatestLegal,
+  saveCurrentUserLegalAcceptance,
+} from './legalAcceptanceService';

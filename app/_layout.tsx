@@ -19,6 +19,7 @@ import Navigation from '../src/components/Navigation';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { logger } from '../src/utils/logger';
 import { determinePostAuthRoute, ROUTES } from '../src/utils/authNavigation';
+import { hasCurrentUserAcceptedLatestLegal } from '../src/services/legalAcceptanceService';
 import { useNotifications } from '../src/hooks/useNotifications';
 import { readHasSeenGetStarted, persistHasSeenGetStarted } from '../src/utils/getStartedPreference';
 
@@ -43,6 +44,7 @@ const RootLayout: React.FC = () => {
   const lastAuthState = useRef<boolean | null>(null);
   const { notification } = useNotifications();
   const [hasSeenGetStarted, setHasSeenGetStarted] = useState<boolean | null>(null);
+  const [hasAcceptedLegal, setHasAcceptedLegal] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -80,6 +82,7 @@ const RootLayout: React.FC = () => {
           logger.warn('App', 'Supabase not ready, skipping session check');
           setIsCheckingAuth(false);
           setIsAuthenticated(false);
+          setHasAcceptedLegal(false);
           return;
         }
 
@@ -88,12 +91,21 @@ const RootLayout: React.FC = () => {
 
         setIsAuthenticated(hasSession);
         lastAuthState.current = hasSession;
+
+        if (hasSession) {
+          const { accepted } = await hasCurrentUserAcceptedLatestLegal();
+          setHasAcceptedLegal(accepted);
+        } else {
+          setHasAcceptedLegal(false);
+        }
+
         setIsCheckingAuth(false);
 
         // Reduced logging
       } catch (err) {
         logger.error('Auth', 'Error checking session:', err);
         setIsAuthenticated(false);
+        setHasAcceptedLegal(false);
         setIsCheckingAuth(false);
       }
     };
@@ -114,12 +126,15 @@ const RootLayout: React.FC = () => {
         lastAuthState.current = hasSession;
 
         if (event === 'SIGNED_IN' && hasSession) {
+          const { accepted } = await hasCurrentUserAcceptedLatestLegal();
+          setHasAcceptedLegal(accepted);
           setHasSeenGetStarted(true);
           void persistHasSeenGetStarted();
           navigationInitialized.current = false;
           const targetRoute = await determinePostAuthRoute();
           router.replace(targetRoute ?? ROUTES.home);
         } else if (event === 'SIGNED_OUT') {
+          setHasAcceptedLegal(false);
           navigationInitialized.current = false;
           router.replace(ROUTES.auth);
         }
@@ -137,6 +152,19 @@ const RootLayout: React.FC = () => {
     }
   }, [isAuthenticated]);
 
+
+  useEffect(() => {
+    if (!isAuthenticated || hasAcceptedLegal !== null) {
+      return;
+    }
+
+    hasCurrentUserAcceptedLatestLegal()
+      .then(({ accepted }) => setHasAcceptedLegal(accepted))
+      .catch((error) => {
+        logger.error('Auth', 'Failed to load legal acceptance state', error);
+        setHasAcceptedLegal(false);
+      });
+  }, [hasAcceptedLegal, isAuthenticated]);
   useEffect(() => {
     if (notification && notification.request.content.data) {
       const data = notification.request.content.data;
@@ -149,7 +177,7 @@ const RootLayout: React.FC = () => {
   }, [notification, router]);
 
   useEffect(() => {
-    if (!fontsLoaded || isCheckingAuth || isAuthenticated === null || hasSeenGetStarted === null) {
+    if (!fontsLoaded || isCheckingAuth || isAuthenticated === null || hasSeenGetStarted === null || hasAcceptedLegal === null) {
       return;
     }
 
@@ -165,6 +193,13 @@ const RootLayout: React.FC = () => {
     const skipLanding = hasSeenGetStarted === true;
 
     if (isAuthenticated) {
+      const onLegalConsent = pathname === ROUTES.legalConsent;
+      if (!hasAcceptedLegal && !onLegalConsent && !isPublicDeletePage) {
+        navigationInitialized.current = true;
+        router.replace(ROUTES.legalConsent);
+        return;
+      }
+
       if (inAuthGroup || onGetStarted) {
         navigationInitialized.current = true;
         determinePostAuthRoute().then((targetRoute) => {
@@ -189,9 +224,9 @@ const RootLayout: React.FC = () => {
         router.replace(ROUTES.landing);
       }
     }
-  }, [isAuthenticated, segments, router, fontsLoaded, isCheckingAuth, hasSeenGetStarted]);
+  }, [hasAcceptedLegal, isAuthenticated, pathname, segments, router, fontsLoaded, isCheckingAuth, hasSeenGetStarted]);
 
-  if (!fontsLoaded || isCheckingAuth || isAuthenticated === null || hasSeenGetStarted === null) {
+  if (!fontsLoaded || isCheckingAuth || isAuthenticated === null || hasSeenGetStarted === null || hasAcceptedLegal === null) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563eb" />
