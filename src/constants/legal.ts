@@ -42,6 +42,8 @@ const resolveSupportEmail = (): string => {
 };
 
 export const LEGAL_VERSION = 'v1.0';
+export const TERMS_VERSION = LEGAL_VERSION;
+export const PRIVACY_VERSION = LEGAL_VERSION;
 export const LEGAL_EFFECTIVE_DATE = 'April 3, 2026';
 export const LEGAL_LAST_UPDATED = 'April 3, 2026';
 

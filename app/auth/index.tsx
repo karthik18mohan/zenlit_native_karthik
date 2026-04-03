@@ -53,6 +53,7 @@ const AuthScreen: React.FC = () => {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
+  const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false);
 
   const cardOpacity = useRef(new Animated.Value(0)).current;
   const cardTranslate = useRef(new Animated.Value(24)).current;
@@ -92,7 +93,7 @@ const AuthScreen: React.FC = () => {
   }, []);
 
   const handleEmail = async () => {
-    if (!isValidEmail || emailLoading) {
+    if (!isValidEmail || emailLoading || !hasAcceptedLegal) {
       return;
     }
 
@@ -205,13 +206,31 @@ const AuthScreen: React.FC = () => {
             </View>
 
             <Pressable
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: hasAcceptedLegal }}
+              onPress={() => setHasAcceptedLegal((previous) => !previous)}
+              style={styles.consentRow}
+            >
+              <View style={[styles.checkbox, hasAcceptedLegal ? styles.checkboxChecked : null]}>
+                {hasAcceptedLegal ? <Text style={styles.checkboxMark}>✓</Text> : null}
+              </View>
+              <Text style={styles.consentText}>
+                I agree to the{' '}
+                <Text style={styles.legalLink} onPress={openTerms}>Terms of Service</Text>
+                {' '}and acknowledge the{' '}
+                <Text style={styles.legalLink} onPress={openPrivacy}>Privacy Policy</Text>
+                .
+              </Text>
+            </Pressable>
+
+            <Pressable
               accessibilityRole="button"
               onPress={handleEmail}
-              disabled={!isValidEmail || emailLoading}
+              disabled={!isValidEmail || emailLoading || !hasAcceptedLegal}
               style={({ pressed }) => [
                 styles.primaryButton,
-                (!isValidEmail || emailLoading) ? styles.disabled : null,
-                pressed && isValidEmail && !emailLoading ? styles.primaryButtonPressed : null,
+                (!isValidEmail || emailLoading || !hasAcceptedLegal) ? styles.disabled : null,
+                pressed && isValidEmail && !emailLoading && hasAcceptedLegal ? styles.primaryButtonPressed : null,
               ]}
             >
               <LinearGradient
@@ -227,12 +246,6 @@ const AuthScreen: React.FC = () => {
             </Pressable>
           </Animated.View>
 
-          <Text style={styles.legalText}>
-            By continuing, you agree to our{' '}
-            <Text style={styles.legalLink} onPress={openTerms}>Terms of Service</Text>
-            {' '}and{' '}
-            <Text style={styles.legalLink} onPress={openPrivacy}>Privacy Policy</Text>
-          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -342,13 +355,36 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.5,
   },
-  legalText: {
-    marginTop: 32,
-    fontSize: 12,
-    color: '#64748b',
-    textAlign: 'center',
+  consentRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 20,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  checkboxChecked: {
+    borderColor: '#2563eb',
+    backgroundColor: '#2563eb',
+  },
+  checkboxMark: {
+    color: '#ffffff',
+    fontWeight: '700',
+  },
+  consentText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#cbd5e1',
     lineHeight: 18,
-    maxWidth: 300,
   },
   legalLink: {
     color: '#60a5fa',

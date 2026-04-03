@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { hasCurrentUserAcceptedLatestLegal } from '../services/legalAcceptanceService';
 import { logger } from './logger';
 
 export const ROUTES = {
@@ -6,6 +7,7 @@ export const ROUTES = {
   auth: '/auth',
   onboardingBasic: '/onboarding/profile/basic',
   onboardingComplete: '/onboarding/profile/complete',
+  legalConsent: '/onboarding/legal-consent',
   home: '/radar',
 } as const;
 
@@ -50,6 +52,11 @@ export const determinePostAuthRoute = async (options?: {
     if (!userId) {
       logger.warn('AuthNavigation', 'No authenticated user available to determine route');
       return ROUTES.auth;
+    }
+
+    const { accepted: hasLatestLegalAcceptance } = await hasCurrentUserAcceptedLatestLegal();
+    if (!hasLatestLegalAcceptance) {
+      return ROUTES.legalConsent;
     }
 
     let profile: ProfileRecord | null | undefined = options?.profileOverride;
