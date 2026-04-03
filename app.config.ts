@@ -6,14 +6,39 @@ import { ConfigContext, ExpoConfig } from "expo/config";
 const uniqueSchemes = (schemes: Array<string | undefined>): string[] =>
   Array.from(new Set((schemes.filter(Boolean) as string[])));
 
+const removeTrailingSlash = (value?: string): string | undefined =>
+  typeof value === "string" && value.trim().length ? value.trim().replace(/\/$/, "") : undefined;
+
 type PluginConfig = NonNullable<ExpoConfig["plugins"]>[number];
 
+type ConfigExtra = {
+  supabaseUrl?: string;
+  supabaseAnonKey?: string;
+  webBaseUrl?: string;
+  supportEmail?: string;
+  privacyPolicyUrl?: string;
+  termsUrl?: string;
+  accountDeletionUrl?: string;
+  eas?: ExpoConfig["extra"];
+  router?: ExpoConfig["extra"];
+};
+
 export default ({ config }: ConfigContext): ExpoConfig => {
-  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-  const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL;
-  const supportEmail = process.env.EXPO_PUBLIC_SUPPORT_EMAIL;
-  // Google OAuth configuration removed
+  const existingExtra = (config.extra ?? {}) as ConfigExtra;
+
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? existingExtra.supabaseUrl;
+  const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? existingExtra.supabaseAnonKey;
+  const webBaseUrl = removeTrailingSlash(process.env.EXPO_PUBLIC_WEB_BASE_URL ?? existingExtra.webBaseUrl);
+  const supportEmail = process.env.EXPO_PUBLIC_SUPPORT_EMAIL ?? existingExtra.supportEmail;
+  const privacyPolicyUrl =
+    removeTrailingSlash(process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL ?? existingExtra.privacyPolicyUrl) ||
+    (webBaseUrl ? `${webBaseUrl}/privacy` : undefined);
+  const termsUrl =
+    removeTrailingSlash(process.env.EXPO_PUBLIC_TERMS_URL ?? existingExtra.termsUrl) ||
+    (webBaseUrl ? `${webBaseUrl}/terms` : undefined);
+  const accountDeletionUrl =
+    removeTrailingSlash(process.env.EXPO_PUBLIC_ACCOUNT_DELETION_URL ?? existingExtra.accountDeletionUrl) ||
+    (webBaseUrl ? `${webBaseUrl}/delete-account` : undefined);
 
   const buildPropertiesPluginConfig: PluginConfig = [
     "expo-build-properties",
@@ -100,6 +125,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       supabaseAnonKey,
       webBaseUrl,
       supportEmail,
+      privacyPolicyUrl,
+      termsUrl,
+      accountDeletionUrl,
       eas: config.extra?.eas,
       router: config.extra?.router,
     },

@@ -1,5 +1,13 @@
 import Constants from 'expo-constants';
 
+type ExtraConfig = {
+  webBaseUrl?: string;
+  supportEmail?: string;
+  privacyPolicyUrl?: string;
+  termsUrl?: string;
+  accountDeletionUrl?: string;
+};
+
 const normalize = (value?: string): string | undefined => {
   if (!value || typeof value !== 'string') {
     return undefined;
@@ -13,13 +21,15 @@ const normalize = (value?: string): string | undefined => {
   return trimmed;
 };
 
+const resolveExtra = (): ExtraConfig => (Constants.expoConfig?.extra as ExtraConfig) ?? {};
+
 const resolveBaseUrl = (): string => {
   const envUrl = normalize(process.env.EXPO_PUBLIC_WEB_BASE_URL);
   if (envUrl) {
     return envUrl;
   }
 
-  const extraUrl = normalize((Constants.expoConfig?.extra as any)?.webBaseUrl);
+  const extraUrl = normalize(resolveExtra().webBaseUrl);
   if (extraUrl) {
     return extraUrl;
   }
@@ -33,12 +43,16 @@ const resolveSupportEmail = (): string => {
     return envEmail;
   }
 
-  const extraEmail = normalize((Constants.expoConfig?.extra as any)?.supportEmail);
+  const extraEmail = normalize(resolveExtra().supportEmail);
   if (extraEmail) {
     return extraEmail;
   }
 
   return 'support@zenlit.app';
+};
+
+const resolveUrl = (envValue: string | undefined, extraValue: string | undefined, fallbackPath: string): string => {
+  return normalize(envValue) ?? normalize(extraValue) ?? `${WEB_BASE_URL}${fallbackPath}`;
 };
 
 export const LEGAL_VERSION = 'v1.0';
@@ -50,8 +64,26 @@ export const LEGAL_LAST_UPDATED = 'April 3, 2026';
 export const SUPPORT_EMAIL = resolveSupportEmail();
 export const WEB_BASE_URL = resolveBaseUrl();
 
+export const PRIVACY_POLICY_URL = resolveUrl(
+  process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL,
+  resolveExtra().privacyPolicyUrl,
+  '/privacy'
+);
+
+export const TERMS_URL = resolveUrl(
+  process.env.EXPO_PUBLIC_TERMS_URL,
+  resolveExtra().termsUrl,
+  '/terms'
+);
+
+export const ACCOUNT_DELETION_URL = resolveUrl(
+  process.env.EXPO_PUBLIC_ACCOUNT_DELETION_URL,
+  resolveExtra().accountDeletionUrl,
+  '/delete-account'
+);
+
 export const LEGAL_URLS = {
-  privacy: `${WEB_BASE_URL}/privacy`,
-  terms: `${WEB_BASE_URL}/terms`,
-  accountDeletion: `${WEB_BASE_URL}/delete-account`,
+  privacy: PRIVACY_POLICY_URL,
+  terms: TERMS_URL,
+  accountDeletion: ACCOUNT_DELETION_URL,
 } as const;

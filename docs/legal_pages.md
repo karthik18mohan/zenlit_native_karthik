@@ -15,17 +15,21 @@ These pages are implemented as app routes so they are exported in the web build 
 - Legal acceptance persistence service: `src/services/legalAcceptanceService.ts`
 - Reusable legal page UI component: `src/components/legal/LegalDocumentScreen.tsx`
 
-## Single source of truth for URLs
-Configure one base URL and derive all legal links from it.
+## Single source of truth for legal metadata
+Legal URLs and support contact are centralized in `src/constants/legal.ts` and are sourced from Expo config (`app.config.ts` + `app.json`) with environment overrides.
 
 Set these env vars before build:
-- `EXPO_PUBLIC_WEB_BASE_URL` (example: `https://your-domain.com`)
-- `EXPO_PUBLIC_SUPPORT_EMAIL` (example: `support@your-domain.com`)
+- `EXPO_PUBLIC_WEB_BASE_URL` (example: `https://zenlit.app`)
+- `EXPO_PUBLIC_PRIVACY_POLICY_URL` (defaults to `${EXPO_PUBLIC_WEB_BASE_URL}/privacy`)
+- `EXPO_PUBLIC_TERMS_URL` (defaults to `${EXPO_PUBLIC_WEB_BASE_URL}/terms`)
+- `EXPO_PUBLIC_ACCOUNT_DELETION_URL` (defaults to `${EXPO_PUBLIC_WEB_BASE_URL}/delete-account`)
+- `EXPO_PUBLIC_SUPPORT_EMAIL` (example: `support@zenlit.app`)
 
-Derived URLs used in-app:
-- Privacy: `${EXPO_PUBLIC_WEB_BASE_URL}/privacy`
-- Terms: `${EXPO_PUBLIC_WEB_BASE_URL}/terms`
-- Deletion: `${EXPO_PUBLIC_WEB_BASE_URL}/delete-account`
+Resolved in-app constants:
+- `PRIVACY_POLICY_URL`
+- `TERMS_URL`
+- `ACCOUNT_DELETION_URL`
+- `SUPPORT_EMAIL`
 
 ## Mandatory acceptance flow
 1. Signup/auth now includes an unchecked required checkbox before OTP can be requested.
@@ -72,3 +76,26 @@ Migration file:
 - `terms_of_service.md`
 
 These are repository mirrors only. The reviewable public pages are the web routes above.
+
+## Play submission / release readiness config
+Set these values before creating a Play production submission:
+
+1. **Package/application id**
+   - Android package: `com.arjungowdal4601.zenlit` (from `app.config.ts`)
+2. **Version/build flow**
+   - App version: `expo.version` in `app.json`
+   - Android build number: EAS `build.production.autoIncrement: true` in `eas.json`
+3. **Legal URLs (required for listing + in-app links)**
+   - `EXPO_PUBLIC_PRIVACY_POLICY_URL=https://zenlit.app/privacy`
+   - `EXPO_PUBLIC_TERMS_URL=https://zenlit.app/terms`
+   - `EXPO_PUBLIC_ACCOUNT_DELETION_URL=https://zenlit.app/delete-account`
+   - `EXPO_PUBLIC_SUPPORT_EMAIL=support@zenlit.app`
+4. **Location permissions policy**
+   - Foreground only via `expo-location` plugin (`locationWhenInUsePermission`); do not add background location permissions.
+5. **Android target SDK**
+   - Keep `compileSdkVersion` and `targetSdkVersion` at `35` via `expo-build-properties`.
+
+Quick pre-submit checks:
+- `npx expo config --type public`
+- `npx tsc --noEmit`
+
