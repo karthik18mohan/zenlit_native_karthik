@@ -68,7 +68,12 @@
       "router": {},
       "eas": {
         "projectId": "0a650645-9cc0-410e-a147-f5409c7c8432"
-      }
+      },
+      "webBaseUrl": "https://zenlit.app",
+      "supportEmail": "support@zenlit.app",
+      "privacyPolicyUrl": "https://zenlit.app/privacy",
+      "termsUrl": "https://zenlit.app/terms",
+      "accountDeletionUrl": "https://zenlit.app/delete-account"
     },
     "owner": "arjungowdal4601"
   }

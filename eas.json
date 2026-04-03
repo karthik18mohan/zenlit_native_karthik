@@ -10,7 +10,12 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://yxucgloawhbpjuweoipt.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4dWNnbG9hd2hicGp1d2VvaXB0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyNjQ5ODAsImV4cCI6MjA3NTg0MDk4MH0.PWHoyMRS4xRuulf6avUROUC5ngJ5xxBWl4vDmp17_f4",
-        "EXPO_PUBLIC_REDIRECT_SCHEME": "zenlit"
+        "EXPO_PUBLIC_REDIRECT_SCHEME": "zenlit",
+        "EXPO_PUBLIC_WEB_BASE_URL": "https://zenlit.app",
+        "EXPO_PUBLIC_PRIVACY_POLICY_URL": "https://zenlit.app/privacy",
+        "EXPO_PUBLIC_TERMS_URL": "https://zenlit.app/terms",
+        "EXPO_PUBLIC_ACCOUNT_DELETION_URL": "https://zenlit.app/delete-account",
+        "EXPO_PUBLIC_SUPPORT_EMAIL": "support@zenlit.app"
       }
     },
     "preview": {
@@ -18,7 +23,12 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://yxucgloawhbpjuweoipt.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4dWNnbG9hd2hicGp1d2VvaXB0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyNjQ5ODAsImV4cCI6MjA3NTg0MDk4MH0.PWHoyMRS4xRuulf6avUROUC5ngJ5xxBWl4vDmp17_f4",
-        "EXPO_PUBLIC_REDIRECT_SCHEME": "zenlit"
+        "EXPO_PUBLIC_REDIRECT_SCHEME": "zenlit",
+        "EXPO_PUBLIC_WEB_BASE_URL": "https://zenlit.app",
+        "EXPO_PUBLIC_PRIVACY_POLICY_URL": "https://zenlit.app/privacy",
+        "EXPO_PUBLIC_TERMS_URL": "https://zenlit.app/terms",
+        "EXPO_PUBLIC_ACCOUNT_DELETION_URL": "https://zenlit.app/delete-account",
+        "EXPO_PUBLIC_SUPPORT_EMAIL": "support@zenlit.app"
       }
     },
     "production": {
@@ -26,7 +36,12 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://yxucgloawhbpjuweoipt.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4dWNnbG9hd2hicGp1d2VvaXB0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyNjQ5ODAsImV4cCI6MjA3NTg0MDk4MH0.PWHoyMRS4xRuulf6avUROUC5ngJ5xxBWl4vDmp17_f4",
-        "EXPO_PUBLIC_REDIRECT_SCHEME": "zenlit"
+        "EXPO_PUBLIC_REDIRECT_SCHEME": "zenlit",
+        "EXPO_PUBLIC_WEB_BASE_URL": "https://zenlit.app",
+        "EXPO_PUBLIC_PRIVACY_POLICY_URL": "https://zenlit.app/privacy",
+        "EXPO_PUBLIC_TERMS_URL": "https://zenlit.app/terms",
+        "EXPO_PUBLIC_ACCOUNT_DELETION_URL": "https://zenlit.app/delete-account",
+        "EXPO_PUBLIC_SUPPORT_EMAIL": "support@zenlit.app"
       }
     }
   },
