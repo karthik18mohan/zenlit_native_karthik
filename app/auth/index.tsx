@@ -1,8 +1,7 @@
 import * as React from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
-  BackHandler,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -13,29 +12,17 @@ import {
   TextInput,
   View,
   Alert,
-  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
 
 import { createShadowStyle } from '../../src/utils/shadow';
 import GradientTitle from '../../src/components/GradientTitle';
 import { supabase, supabaseReady } from '../../src/lib/supabase';
 import { logger } from '../../src/utils/logger';
-import { LEGAL_URLS } from '../../src/constants/legal';
 
 const PRIMARY_GRADIENT = ['#2563eb', '#7e22ce'] as const;
-const DIVIDER_LINE_COLORS = [
-  'rgba(37, 99, 235, 0)',
-  'rgba(37, 99, 235, 0.45)',
-  'rgba(37, 99, 235, 0)',
-] as const;
-const DIVIDER_BADGE_COLORS = [
-  'rgba(37, 99, 235, 0.35)',
-  'rgba(126, 34, 206, 0.45)',
-] as const;
 const CARD_ELEVATION = createShadowStyle({
   native: {
     shadowColor: '#000000',
@@ -53,7 +40,6 @@ const AuthScreen: React.FC = () => {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
-  const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false);
 
   const cardOpacity = useRef(new Animated.Value(0)).current;
   const cardTranslate = useRef(new Animated.Value(24)).current;
@@ -83,17 +69,8 @@ const AuthScreen: React.FC = () => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   }, [email]);
 
-
-  const openTerms = useCallback(() => {
-    Linking.openURL(LEGAL_URLS.terms);
-  }, []);
-
-  const openPrivacy = useCallback(() => {
-    Linking.openURL(LEGAL_URLS.privacy);
-  }, []);
-
   const handleEmail = async () => {
-    if (!isValidEmail || emailLoading || !hasAcceptedLegal) {
+    if (!isValidEmail || emailLoading) {
       return;
     }
 
@@ -108,7 +85,7 @@ const AuthScreen: React.FC = () => {
     setEmailLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithOtp({
+      const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
           shouldCreateUser: true,
@@ -205,32 +182,18 @@ const AuthScreen: React.FC = () => {
               />
             </View>
 
-            <Pressable
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: hasAcceptedLegal }}
-              onPress={() => setHasAcceptedLegal((previous) => !previous)}
-              style={styles.consentRow}
-            >
-              <View style={[styles.checkbox, hasAcceptedLegal ? styles.checkboxChecked : null]}>
-                {hasAcceptedLegal ? <Text style={styles.checkboxMark}>✓</Text> : null}
-              </View>
-              <Text style={styles.consentText}>
-                I agree to the{' '}
-                <Text style={styles.legalLink} onPress={openTerms}>Terms of Service</Text>
-                {' '}and acknowledge the{' '}
-                <Text style={styles.legalLink} onPress={openPrivacy}>Privacy Policy</Text>
-                .
-              </Text>
-            </Pressable>
+            <Text style={styles.legalNotice}>
+              You will review and accept the current Terms of Service and Privacy Policy on the next step before app access is granted.
+            </Text>
 
             <Pressable
               accessibilityRole="button"
               onPress={handleEmail}
-              disabled={!isValidEmail || emailLoading || !hasAcceptedLegal}
+              disabled={!isValidEmail || emailLoading}
               style={({ pressed }) => [
                 styles.primaryButton,
-                (!isValidEmail || emailLoading || !hasAcceptedLegal) ? styles.disabled : null,
-                pressed && isValidEmail && !emailLoading && hasAcceptedLegal ? styles.primaryButtonPressed : null,
+                (!isValidEmail || emailLoading) ? styles.disabled : null,
+                pressed && isValidEmail && !emailLoading ? styles.primaryButtonPressed : null,
               ]}
             >
               <LinearGradient
@@ -311,7 +274,7 @@ const styles = StyleSheet.create({
   },
   inputBlock: {
     width: '100%',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   inputLabel: {
     fontSize: 13,
@@ -330,6 +293,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     fontSize: 16,
+  },
+  legalNotice: {
+    width: '100%',
+    color: '#94a3b8',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 20,
   },
   primaryButton: {
     width: '100%',
@@ -354,41 +324,6 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.5,
-  },
-  consentRow: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 20,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.9)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 1,
-  },
-  checkboxChecked: {
-    borderColor: '#2563eb',
-    backgroundColor: '#2563eb',
-  },
-  checkboxMark: {
-    color: '#ffffff',
-    fontWeight: '700',
-  },
-  consentText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#cbd5e1',
-    lineHeight: 18,
-  },
-  legalLink: {
-    color: '#60a5fa',
-    textDecorationLine: 'underline',
   },
 });
 

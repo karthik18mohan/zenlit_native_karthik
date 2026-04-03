@@ -1,16 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 
-const canSubmitSignup = ({ isValidEmail, hasAcceptedLegal, emailLoading }) => {
-  return isValidEmail && hasAcceptedLegal && !emailLoading;
-};
+const authScreenSource = fs.readFileSync('app/auth/index.tsx', 'utf8');
+const legalConsentSource = fs.readFileSync('app/onboarding/legal-consent.tsx', 'utf8');
+const legalServiceSource = fs.readFileSync('src/services/legalAcceptanceService.ts', 'utf8');
 
-const buildLegalLinks = (baseUrl) => {
-  const normalized = String(baseUrl).trim().replace(/\/$/, '');
-  return {
-    terms: `${normalized}/terms`,
-    privacy: `${normalized}/privacy`,
-  };
+const canSubmitSignup = ({ isValidEmail, emailLoading }) => {
+  return isValidEmail && !emailLoading;
 };
 
 const hasLatestLegalVersions = (record, versions) => {
@@ -25,21 +22,32 @@ const hasLatestLegalVersions = (record, versions) => {
   );
 };
 
-test('signup remains blocked until legal acceptance is checked', () => {
+test('signup no longer depends on a duplicate legal checkbox gate before OTP send', () => {
   assert.equal(
-    canSubmitSignup({ isValidEmail: true, hasAcceptedLegal: false, emailLoading: false }),
-    false,
-  );
-  assert.equal(
-    canSubmitSignup({ isValidEmail: true, hasAcceptedLegal: true, emailLoading: false }),
+    canSubmitSignup({ isValidEmail: true, emailLoading: false }),
     true,
+  );
+  assert.doesNotMatch(authScreenSource, /accessibilityRole="checkbox"/);
+  assert.doesNotMatch(authScreenSource, /hasAcceptedLegal/);
+  assert.match(
+    authScreenSource,
+    /You will review and accept the current Terms of Service and Privacy Policy on the next step before app access is granted\./,
   );
 });
 
-test('legal links resolve to live terms/privacy endpoints', () => {
-  const links = buildLegalLinks('https://zenlit.app/');
-  assert.equal(links.terms, 'https://zenlit.app/terms');
-  assert.equal(links.privacy, 'https://zenlit.app/privacy');
+test('legal consent screen includes explicit terms and privacy links', () => {
+  assert.match(legalConsentSource, /Terms of Service/);
+  assert.match(legalConsentSource, /Privacy Policy/);
+  assert.match(legalConsentSource, /Linking\.openURL\(LEGAL_URLS\.terms\)/);
+  assert.match(legalConsentSource, /Linking\.openURL\(LEGAL_URLS\.privacy\)/);
+});
+
+test('acceptance persistence writes user, versions, and acceptance timestamp to legal_acceptances', () => {
+  assert.match(legalServiceSource, /from\('legal_acceptances'\)/);
+  assert.match(legalServiceSource, /user_id:\s*user\.id/);
+  assert.match(legalServiceSource, /terms_version:\s*TERMS_VERSION/);
+  assert.match(legalServiceSource, /privacy_version:\s*PRIVACY_VERSION/);
+  assert.match(legalServiceSource, /accepted_at:\s*nowIso/);
 });
 
 test('acceptance validity requires matching terms/privacy versions and timestamp', () => {

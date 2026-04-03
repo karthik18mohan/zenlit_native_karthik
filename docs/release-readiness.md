@@ -12,7 +12,7 @@ This document tracks what is complete in code versus what still needs human acti
   - `/privacy`
   - `/terms`
 - Legal links are clickable in auth and onboarding consent UIs.
-- Sign-up is blocked unless legal consent checkbox is checked.
+- Sign-up captures email/OTP only; legal acceptance is handled once in the persisted legal-consent gate after authentication.
 - Existing users are routed through legal re-acceptance when legal version changes.
 - Location permission rationale is shown before system permission prompt.
 - Legal/support/account deletion URLs are configurable via Expo env + `app.config.ts` extras.
@@ -60,7 +60,7 @@ eas submit --platform android --profile production
 - Deploy `delete-account` function to production Supabase.
 - Build a fresh `production` Android artifact and install on test devices.
 - Manually verify end-to-end flows on device:
-  - New sign-in legal checkbox gating.
+  - New sign-in route to legal consent gate before first app access.
   - Existing-user legal re-acceptance after bumping legal version in staging.
   - In-app delete account flow.
   - Web delete account flow (OTP + permanent delete).

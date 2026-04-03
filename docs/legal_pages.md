@@ -12,7 +12,7 @@ These pages are implemented as app routes so they are exported in the web build 
 - Privacy page route: `app/privacy.tsx`
 - Terms page route: `app/terms.tsx`
 - Account deletion route: `app/delete-account.tsx`
-- Auth consent checkbox gate: `app/auth/index.tsx`
+- Auth email capture (no legal proof state): `app/auth/index.tsx`
 - Existing-user legal gate: `app/onboarding/legal-consent.tsx`
 - Profile legal hub route: `app/profile/legal.tsx`
 - Profile menu legal entry: `src/components/profile/ProfileMenuSheet.tsx`
@@ -37,11 +37,12 @@ Resolved in-app constants:
 - `SUPPORT_EMAIL`
 
 ## Mandatory acceptance flow
-1. Signup/auth now includes an unchecked required checkbox before OTP can be requested.
-2. The consent line uses clickable links to the live Terms and Privacy URLs from `LEGAL_URLS`.
-3. Every authenticated user is checked for acceptance of the latest terms/privacy versions.
-4. Users without a matching acceptance record are redirected to `/onboarding/legal-consent` and blocked from core app screens until acceptance is saved.
-5. The legal-consent screen keeps **Log out** and **Delete account** actions available.
+1. Signup/auth collects only the user email and sends OTP; it does **not** capture legal proof state.
+2. After authentication, route guards immediately check `legal_acceptances` for the current `TERMS_VERSION` and `PRIVACY_VERSION`.
+3. If no current acceptance exists, users are routed to `/onboarding/legal-consent` and blocked from core app screens.
+4. The legal-consent screen includes explicit wording, clickable Terms + Privacy links, and a required unchecked affirmation control.
+5. Tapping **Accept and Continue** persists `user_id`, `terms_version`, `privacy_version`, and `accepted_at` in `public.legal_acceptances` via `saveCurrentUserLegalAcceptance`.
+6. The legal-consent screen keeps **Log out** and **Delete account** actions available while gated.
 
 ## Acceptance storage
 Acceptance is persisted in `public.legal_acceptances`.
